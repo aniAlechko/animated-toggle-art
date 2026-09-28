@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Animated Toggle Art</title>
+    
+    <style>
+        :root {
+            /* Palette based on the reference image */
+            --color-red: #E62A21;
+            --color-green: #1A9E46;
+            --color-blue: #1A5CE5;
+            --color-yellow: #F1B70A;
+            --color-black: #1A1A1A;
+            
+            /* Toggle dimensions */
+            --toggle-width: 70px;
+            --toggle-height: 160px;
+            --circle-size: 54px;
+            --padding: 8px; /* Space between circle and toggle edge */
+            
+            /* Calculate travel distance: height - circle - (padding * 2) */
+            --travel-distance: calc(var(--toggle-height) - var(--circle-size) - (var(--padding) * 2));
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: #e4e4e1; /* Subtle wall-like background */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: sans-serif;
+            overflow: hidden;
+        }
+
+        .art-frame {
+            background-color: #F8F8F8; /* Bright white background for the canvas */
+            padding: 50px 60px;
+            /* Thick black border to mimic a picture frame */
+            border: 24px solid #111; 
+            /* Subtle inner shadow and strong outer drop shadow */
+            box-shadow: 
+                inset 0 0 10px rgba(0,0,0,0.1),
+                0 30px 60px rgba(0,0,0,0.4),
+                0 15px 20px rgba(0,0,0,0.2);
+            border-radius: 4px; /* Very slight rounding on the outer frame */
+        }
+
+        .toggle-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 40px 50px; /* Vertical and horizontal gap between toggles */
+        }
+
+        .toggle-capsule {
+            width: var(--toggle-width);
+            height: var(--toggle-height);
+            background-color: var(--color-black);
+            border-radius: 50px; /* Pill shape */
+            position: relative;
+            cursor: pointer;
+            /* Subtle shadow to give the capsule depth */
+            box-shadow: inset 0 4px 8px rgba(0,0,0,0.8), 0 2px 0 rgba(255,255,255,0.1);
+        }
+
+        .toggle-circle {
+            width: var(--circle-size);
+            height: var(--circle-size);
+            border-radius: 50%;
+            position: absolute;
+            left: var(--padding);
+            top: var(--padding);
+            /* Smooth transition for the sliding animation */
+            transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+            /* Light reflection and shadow for a 3D matte feel */
+            box-shadow: 
+                inset 0 4px 6px rgba(255,255,255,0.2),
+                inset 0 -4px 6px rgba(0,0,0,0.2),
+                0 4px 8px rgba(0,0,0,0.5);
+        }
+
+        /* State classes for top and bottom positions */
+        .position-top {
+            transform: translateY(0);
+        }
+
+        .position-bottom {
+            transform: translateY(var(--travel-distance));
+        }
+
+        /* Responsive scaling for smaller screens */
+        @media (max-width: 600px) {
+            .art-frame {
+                padding: 30px 20px;
+                border-width: 16px;
+                transform: scale(0.8);
+            }
+            .toggle-grid {
+                gap: 20px 25px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="art-frame">
+        <div class="toggle-grid" id="grid">
+            <!-- Toggles will be generated here by JavaScript -->
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const grid = document.getElementById('grid');
+            const colors = [
+                'var(--color-red)', 
+                'var(--color-green)', 
+                'var(--color-blue)', 
+                'var(--color-yellow)'
+            ];
+            
+            const numToggles = 16; // 4x4 grid
+            const toggles = [];
+
+            // 1. Generate the grid
+            for (let i = 0; i < numToggles; i++) {
+                // Create capsule
+                const capsule = document.createElement('div');
+                capsule.classList.add('toggle-capsule');
+                
+                // Create circle inside
+                const circle = document.createElement('div');
+                circle.classList.add('toggle-circle');
+                
+                // Assign random color
+                const randomColor = colors[Math.floor(Math.random() * colors.length)];
+                circle.style.backgroundColor = randomColor;
+                
+                // Assign random initial position (top or bottom)
+                const isTop = Math.random() > 0.5;
+                circle.classList.add(isTop ? 'position-top' : 'position-bottom');
+                
+                // Append
+                capsule.appendChild(circle);
+                grid.appendChild(capsule);
+
+                // Store reference and state for animation
+                const toggleData = {
+                    element: circle,
+                    isTop: isTop,
+                    timeoutId: null
+                };
+                toggles.push(toggleData);
+
+                // Add manual click interaction
+                capsule.addEventListener('click', () => {
+                    toggleState(toggleData);
+                    resetAnimation(toggleData);
+                });
+                
+                // Start automated animation loop for this specific toggle
+                scheduleNextFlip(toggleData);
+            }
+
+            
+            // Flips the position of a given toggle
+            function toggleState(toggleData) {
+                toggleData.isTop = !toggleData.isTop;
+                if (toggleData.isTop) {
+                    toggleData.element.classList.remove('position-bottom');
+                    toggleData.element.classList.add('position-top');
+                } else {
+                    toggleData.element.classList.remove('position-top');
+                    toggleData.element.classList.add('position-bottom');
+                }
+            }
+
+            // Schedules the next random flip for a toggle
+            function scheduleNextFlip(toggleData) {
+                // Random time between 1.5 and 6.5 seconds
+                const randomDelay = Math.random() * 5000 + 1500; 
+                
+                toggleData.timeoutId = setTimeout(() => {
+                    toggleState(toggleData);
+                    scheduleNextFlip(toggleData); // Loop
+                }, randomDelay);
+            }
+
+            // Resets the timer if the user manually clicks, so it doesn't flip twice too fast
+            function resetAnimation(toggleData) {
+                if (toggleData.timeoutId) {
+                    clearTimeout(toggleData.timeoutId);
+                }
+                scheduleNextFlip(toggleData);
+            }
+        });
+    </script>
+</body>
+</html>
